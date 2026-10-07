@@ -1,0 +1,28 @@
+# Projektni override standarda (šablon, STANDARD.md §16)
+#
+# Ne kopira standard — samo referencira verziju i lokalna odstupanja.
+# SMIJE pooštriti invarijante (§1), NIKAD ih oslabiti.
+
+standard_version: "1.1"
+standard_location: "~/agent-standard/STANDARD.md"
+
+# Šta ovaj projekat pooštrava u odnosu na standard (dozvoljeno),
+# npr. dodatni H/M uslov, obavezan drugi review za sve HIGH bez izuzetka, itd.
+tightenings: []
+
+# Koji gate-ovi i validatori iz §6 su uključeni za ovaj projekat
+gates:
+  check_contract: false
+  check_report: false
+  check_scope: false
+  secret_scan: false
+  architecture_contract: false
+
+# Pisana delegacija merge ovlaštenja po klasi (§4 "Human gate" red),
+# samo za LOW/MEDIUM — HIGH se nikad ne delegira (I-3).
+merge_delegation:
+  low: false
+  medium: false
+
+# Lokalne zaštićene putanje (pored STANDARD §6.4 — fajlovi mehanizma)
+protected_paths: []
