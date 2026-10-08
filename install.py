@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Install/update the AGENT-STANDARD marker block in global agent config
-files (AGENT-STD-001, Standard rada sa AI agentima v1.1, §3.1/§3.2).
+files (AGENT-STD-001, Standard rada sa AI agentima v1.2, §3.1/§3.2).
 
 Only the standard library. Works unmodified on Windows and Fedora. Respects
 CODEX_HOME. Never touches content outside the marker block.
 
 Marker block::
 
-    <!-- AGENT-STANDARD:BEGIN version=1.1 sha256=<hash of GLOBAL_ROUTER.md> -->
+    <!-- AGENT-STANDARD:BEGIN version=1.2 sha256=<hash of GLOBAL_ROUTER.md> -->
     ...contents of GLOBAL_ROUTER.md...
     <!-- AGENT-STANDARD:END -->
 
@@ -43,7 +43,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent
 ROUTER_PATH = REPO_ROOT / "GLOBAL_ROUTER.md"
-STANDARD_VERSION = "1.1"
+STANDARD_VERSION = "1.2"
 
 _BEGIN_RE = re.compile(
     r"<!-- AGENT-STANDARD:BEGIN version=(?P<version>[^\s]+) "

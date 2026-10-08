@@ -1,4 +1,4 @@
-# Standard rada sa AI agentima — globalni router (v1.1)
+# Standard rada sa AI agentima — globalni router (v1.2)
 
 Ovo važi u svakom projektu. Puni standard: `~/agent-standard/STANDARD.md`.
 Ne čitaj ga cijelog — čitaj samo sekcije koje ti trebaju (tabela niže).

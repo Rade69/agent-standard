@@ -1,18 +1,25 @@
 ---
 title: "Standard rada sa AI agentima"
-version: "1.2"
+version: "1.1-candidate"
 date: "2026-10-08"
-status: "USVOJENA KANONSKA VERZIJA (Human Owner, 2026-10-08)"
-supersedes: "STANDARD_RADA_SA_AI_AGENTIMA v1.1"
+status: "PRIJEDLOG — čeka Human Owner odluku"
+supersedes_candidate: "v1.0"
+candidate_base: "STANDARD.md v1.1 (trenutni usvojeni kanon u agent-standard repou)"
 authority: "Human Owner"
 scope: "Svi projekti, svi modeli i harnessi"
-canonical_location: "~/agent-standard/STANDARD.md"
+canonical_location: "OTVORENO — odlučuje se pri implementaciji (vidi §16)"
 ---
 
-# Standard rada sa AI agentima — v1.2
+# Standard rada sa AI agentima — v1.1 Candidate
 
 > **Model radi. Mehanizam provodi. Evidence potvrđuje. Nezavisni reviewer
 > pokušava oboriti rezultat. Čovjek odlučuje.**
+
+> **Napomena o bazi (važno).** Ovaj fajl je kandidat, ne kanon. U
+> repozitoriju `agent-standard` trenutno je usvojen `STANDARD.md` v1.1;
+> `v1.0` postoji samo kao arhivska kopija. Zato ovaj candidate gradi na
+> kanonu v1.1, a ne na arhivskom v1.0. Ako se prihvati, numeriše se kao
+> sljedeća verzija (predlog: v1.2), da ne kolidira sa već usvojenim v1.1.
 
 Razlika u odnosu na v0.2 je u drugoj rečenici. v0.2 je ispravno opisivao
 *kako* treba raditi, ali je gotovo sve ostavljao disciplini agenta. Iskustvo
@@ -37,6 +44,10 @@ Agent ne čita cijeli standard za svaki task. Čita ovo:
 | Paralelni rad | §8 |
 | Review | §10 |
 | Pisanje/izmjena guarda ili hooka | §6 |
+| Program sa više taskova (spec → taskovi) | §8.5 |
+| Odluka o mergeu | §11.4 |
+| Periodični retro procesa | §17.4 |
+| Terminologija projekta (opciono) | §7.6 |
 
 Ostalo se čita kad se pojavi potreba. Ovo je isto pravilo kao za kod
 (just-in-time retrieval), primijenjeno na sam standard.
@@ -139,6 +150,26 @@ reportima. Test:
 
 > Ako se sutra promijeni model ili harness, novi agent nastavlja iz repoa
 > bez rekonstrukcije starog chata.
+
+### 2.4 Deterministička orkestracija prije agentske
+
+Kada je proces poznat, stabilan i ponovljiv, koordinaciju treba da nosi
+**deterministički mehanizam** — skripta, state machine, loop, CI job — a ne
+LLM koordinator. Agent ostaje tamo gdje je potrebno rezonovanje:
+nerazjašnjen problem, nova domena, odluka bez unaprijed poznatog puta.
+
+```text
+poznat proces     → deterministička orkestracija (kod/loop/gate)
+nepoznat problem  → agentsko rezonovanje (istraživanje, odluka, dizajn)
+```
+
+Razlog je mjerljiv: agentski koordinator može "odlutati", troši tokene na
+samu koordinaciju i nema stabilan exit kod. Deterministički loop je
+jeftiniji, brži i ponovljiv. Zato se za svaki procesni tok prvo pita:
+*može li ovo biti skripta umjesto prompta?* Tek ako ne može — agent.
+
+Ovo ne zamjenjuje §2.1 (jedan implementer + jedan reviewer). Ono određuje
+ko vodi tok, a ne koliko agenata radi.
 
 ---
 
@@ -410,32 +441,6 @@ brzo prestaje da se gleda. Redoslijed:
 4. Tek kad je zeleno → blokirajuće
 ```
 
-### 6.7 Deterministic orkestracija prije agent-orkestracije
-
-Isti princip iz §6.1, primijenjen na IZVRŠAVANJE poznatog, ponovljivog
-procesa, ne samo na provjeru pravila:
-
-> **Poznat proces → deterministički skript/state-machine. Neizvjestan
-> problem → agentsko rezonovanje.**
-
-Kad je procedura dovoljno stabilna i ponovljiva da se može opisati kao
-niz koraka (ne kao problem koji treba rješavati), deterministički skript
-ili state-machine je pouzdaniji, jeftiniji i ponovljiviji izbor od agenta
-koji uživo donosi orkestracione odluke — jer skript se ponaša isto svaki
-put, a agent ne.
-
-Agent ostaje tamo gdje je potreban: istraživanje, dizajn, implementacija
-samog koraka, review, i odluke koje zavise od konteksta koji skript ne
-može unaprijed predvidjeti. Agent koji orkestrira POZNAT tok (npr. "uzmi
-sljedeći tiket, pokreni ga, sačekaj, ponovi") je prihvatljiv privremeni
-most dok se skript ne izgradi — ne trajno rješenje.
-
-Ovo je primjena §17.2 (pravilo uklanjanja): kad agent-orkestracija istog
-toka dokaže vrijednost kroz više ponavljanja i tok se pokaže stabilnim,
-razmotriti zamjenu skriptom/state-machineom — ne kao obavezu, nego kao
-sljedeći korak zrelosti. Ne primjenjuje se nazad na nejasne, jednokratne
-ili istraživačke zadatke — tamo agent ostaje ispravan izbor.
-
 ---
 
 ## 7. Context i kontinuitet
@@ -467,18 +472,6 @@ Ako ne — briše se.
 
 AGENTS.md se tretira kao kod: pregleda se kad nešto pođe po zlu, čisti se
 redovno.
-
-#### Opcioni domain glossary
-
-Za projekat sa dokazano konfuznom domenskom terminologijom (npr. isti
-pojam znači različito u različitim dijelovima tima, ili je zabuna već
-stvarno koštala vremena), odvojen, uzak `GLOSSARY.md` — SAMO termini,
-jedna do dvije rečenice po terminu, ništa od implementacije ili plana —
-može biti vrijedan. Isti test kao za AGENTS.md: *da li bi agent pogriješio
-bez ove definicije?* Ne uvoditi preventivno, bez dokazane potrebe.
-Fajl koji ostaje mali je znak da je zdrav; fajl koji samo raste je signal
-da je prestao biti glossary i postao backup dokumentacije — tada se čisti,
-ne dijeli na više fajlova.
 
 ### 7.2 Kontinuitet između sesija
 
@@ -539,6 +532,26 @@ dok mentalni model nije potvrđen.
 Handoff je dobar ako je **nastavljiv**: nova sesija bez starog chata može
 potvrditi stanje, ponoviti ključni evidence i imenovati sljedeći korak.
 
+### 7.6 Opcioni domen glossary
+
+Ako projekat ima dokazano problematičnu terminologiju (dva imena za isti
+pojam, pojmovi koje agent redovno pogrešno tumači), uvodi se mali
+`GLOSSARY.md` — opciono, nikad globalno:
+
+```text
+samo pojmovi specifični za domenu projekta
+za svaki pojam: jedna definicija (1–2 rečenice) + _Avoid_: sinonimi
+bez implementacionih detalja, bez putanja, bez primjera koda
+```
+
+Glossary je odvojen od `AGENTS.md`. Razlog: `AGENTS.md` se učitava u svaku
+sesiju, a glossary treba samo tamo gdje pojmovi postanu relevantni (link iz
+`AGENTS.md` ili iz taska). Ovo je primjena istog mjerenja iz §7.1: veliki
+context fajl u prosjeku škodi, pa domenski rječnik ne smije postati
+obavezan context noise.
+
+Ne uvoditi glossary ako projekat nema stvarni problem s terminologijom.
+
 ---
 
 ## 8. Izolacija i paralelan rad
@@ -581,33 +594,40 @@ STOP → utvrdi novi HEAD/diff/status → sačuvaj tuđi rad →
 provjeri kompatibilnost → nastavi samo unutar svog scope-a
 ```
 
-### 8.5 Task graph za velike planove (opciono)
+### 8.5 Program-level task graph (samo za veće planove)
 
-Za plan sa mnogo među-zavisnih taskova (npr. velika faza, spec sa
-desetinama tiketa), lista taskova nije dovoljna: ne pokazuje koji
-taskovi stvarno čekaju jedni druge, a koji mogu ići nezavisno.
-
-Za takav plan, korisno je eksplicitno zapisati zavisnosti kao graf
-(DEPENDENCY tip iz §8.2, formalizovan):
+Za program koji se sastoji od više malih taskova (spec → taskovi), taskovi
+nisu linearna lista nego **usmjereni graf zavisnosti**:
 
 ```text
-svaki task → lista taskova koji ga blokiraju
-"frontier" = taskovi čiji su svi blokeri završeni, spremni da krenu
+spec            = cilj / destination (šta i zašto)
+task            = bounded implementacijska sesija (jedan diff, acceptance)
+blocking edge   = "task B ne može početi dok A nije integrisan"
+READY frontier  = skup taskova čiji su svi blokeri gotovi
 ```
 
-Frontier se ažurira kad task završi i integriše se u target granu.
-Ovo je PLANIRANJE i PRIKAZ zavisnosti, ne uputstvo da se frontier
-automatski izvršava paralelno sa više agenata odjednom.
+Pravila:
 
-Paralelno pokretanje više writer agenata na istom frontieru ostaje
-izuzetak, ne default (§2.1), i nosi dokumentovan rizik: agenti bez
-međusobne komunikacije mogu nezavisno donijeti nekompatibilne odluke
-nad istim dijeljenim ugovorom (npr. različito imenovanje istog polja) —
-raditi §8.3 provjeru PRIJE paralelne dodjele, ne poslije.
+```text
+1. Svaki task ima: goal, scope, acceptance, zavisnosti, verify.
+2. Frontier se računa iz stvarno integrisanog stanja, ne iz deklaracija.
+3. Task se dodjeljuje tek kad je na frontieru (nema skrivenih zavisnosti).
+4. Paralelno se izvršavaju samo taskovi sa praznim WRITE presjekom (§8.2);
+   graf zavisnosti ne zamjenjuje provjeru konflikta.
+5. Integracija ide u jednu integration granu; tek na njoj se tvrdi
+   whole-program verification.
+```
 
-Ne koristiti za obične taskove — overhead formalnog grafa ima smisla
-samo kad je broj među-zavisnih taskova dovoljno velik da bi se zavisnosti
-inače pratile napamet ili u glavi koordinatora.
+**Wide refactor je izuzetak od vertikalnih slice-ova.** Jedna mehanička
+izmjena velikog blast radiusa (rename kolone, promjena tipa) ne može se
+spustiti kao zeleni vertikalni slice. Sekvencira se kao **expand–contract**:
+prvo dodaj novi oblik pored starog, pa migriraj pozivaoce u serijama, pa
+ukloni stari oblik tek kad nema pozivalaca. Svaka faza je zaseban task sa
+sopstvenim blokadama.
+
+Ovo se **ne koristi za obične taskove**. Jedan task = jedan kontrakt; graf
+se uvodi tek kad plan stvarno ima >1 task i stvarne zavisnosti. Prikaz grafa
+je deterministički gdje je to moguće (§2.4), ne improvizovana lista u chatu.
 
 ---
 
@@ -740,9 +760,6 @@ acceptance: PASS | FAIL
 architecture: PASS | FAIL
 security: PASS | FAIL | N/A
 test_quality: PASS | FAIL
-merge_danger:               # dodano u v1.2
-  reversibility: TWO-WAY | ONE-WAY
-  blast_radius: SMALL | MEDIUM | LARGE
 blocking_findings:
   - id: <stabilan ID>
     severity:
@@ -750,12 +767,6 @@ blocking_findings:
     failure_path:
     fix_direction:
 ```
-
-`merge_danger` je sažetak, ne nova analiza: `reversibility` i
-`blast_radius` se IZVODE iz već odgovorenih risk pitanja (§3) i rollback
-polja (§5.2), ne procjenjuju se iznova. Svrha je da Human Owner u jednom
-pogledu vidi koliko je skupo pogriješiti na merge odluci, bez da ponovo
-čita cijeli risk checklist.
 
 ### 10.3 Šta je finding
 
@@ -803,6 +814,33 @@ Poslije mergea, na stvarnom target checkoutu (ne u starom worktreeju):
 potvrditi target HEAD, pokrenuti puni verify, ažurirati progress/state,
 očistiti privremene artefakte. Dva ispravna taska mogu zajedno napraviti
 problem; ovo je jedino mjesto gdje se to vidi.
+
+### 11.4 Pred merge odluku — reversibility + blast radius
+
+Human Owner odluka o mergeu ne smije se oslanjati na osjećaj. Uz zahtjev
+za merge ide kratak, čitljiv blok:
+
+```text
+Reversibility:  TWO-WAY | ONE-WAY
+Blast radius:   SMALL | MEDIUM | LARGE
+Evidence:       before → after (komanda/output ili screenshot)
+Rollback:       tačna komanda ili "nije moguće"
+```
+
+```text
+TWO-WAY   poništivo bez čekanja i bez štete (revert commit, feature flag)
+ONE-WAY   teško ili nemoguće poništiti (migracija, javni ugovor, slanje
+          van, brisanje podataka)
+```
+
+Ovo ne zamjenjuje risk klasifikaciju (§3) ni rollback iz kontrakta — to su
+ulazni podaci. Ovaj blok ih sažima u trenutku odluke i tjera agenta da
+tvrdnju iznese eksplicitno, umjesto da je prećuti. Procjena agenta **nije
+autoritativna**: agent koji je napisao izmjenu ocjenjuje vlastitu izmjenu,
+pa Human Owner čita ovaj blok najpažljivije, a ne najbrže.
+
+Numerički risk score se ne uvodi — tri riječi i jedna evidence linija nose
+dovoljno informacije.
 
 ---
 
@@ -885,72 +923,11 @@ trajna Human Owner odluka   → decision record
 nešto što agent ne može
 zaključiti iz koda          → AGENTS.md (kratko)
 privremeno stanje           → progress fajl
+periodična frikcija         → retro finding (§17.4)
 ```
 
 Ne praviti novi dokument samo zato što je nešto zanimljivo. Bez očekivanog
 budućeg konzumenta, znanje ostaje u reportu i Git istoriji.
-
-### 13.2 Periodična retrospektiva sesija (opciono, advisory)
-
-§13.1 eskalira kad se ISTI nalaz ponovi na DVA NEZAVISNA TASKA — ali to
-zavisi od toga da neko slučajno primijeti ponavljanje. Periodična
-retrospektiva je dodatni, ne-obavezan mehanizam: čita stvarne agentske
-sesije (transkripte, ne samo finalni PASS/DONE) i traži frikciju koja se
-ne vidi iz krajnjeg rezultata.
-
-Okidači (bilo koji je dovoljan razlog da se pokrene, nije raspored):
-
-```text
-poslije problematičnog taska ili proceduralnog incidenta
-poslije 5–10 reprezentativnih taskova
-kad raste broj fix rundi po tasku
-kad agent ponavlja istu grešku
-kad raste human attention ili tool/context trošak
-```
-
-Kategorije za pregled (čitati stvarnu sesiju, ne nagađati):
-
-```text
-navigacija            koliko dugo je agent tražio fajl/informaciju
-automatski checkovi   da li je postojeći check nepovezan/pokvaren/
-                      nepostojeć (repo bez ikakvog guarda je nalaz sam
-                      po sebi)
-coding standardi      da li je review promašio grešku koja traži pravilo
-                      — mehanička greška ide u check, ne u prozu; prozno
-                      pravilo ide REVIEWERU, ne implementeru (manji
-                      context pressure na review strani)
-AGENTS.md veličina    da li fajl nosi nešto što agent ne bi trebalo da
-                      čita svaki put (vidi §7.1)
-tool economy          da li je neki tool pozivan skupo za ono što vraća
-no-ops                instrukcije u steering fajlovima koje ništa ne
-                      mijenjaju
-information access    informacija koja je bila potrebna, a nije dostupna
-```
-
-Izlaz je lista kandidata, ne izmjena:
-
-```yaml
-retro_finding:
-  problem:
-  evidence:              # tačna sesija/trag, ne generalizacija
-  frequency:
-  impact:
-  candidate_action: KEEP | SIMPLIFY | GUARD | SKILL | DOCUMENT | REMOVE | NO_ACTION
-  expected_benefit:
-  false_positive_risk:
-  human_decision: PENDING
-```
-
-Svaki kandidat ide u tabelu §13.1 ("gdje znanje živi") kad Human Owner
-odluči da se usvoji — retrospektiva sama NE piše guard, NE mijenja
-AGENTS.md, NE mijenja standard, NE instalira skill. Ona samo predlaže;
-isto pravilo kao za novi gate (§6.6): bez replaya i bez odluke, ne
-postaje obavezujuće.
-
-Rizik ovog mehanizma: ako se pokreće nad SVAKOM sesijom (ne samo
-problematičnim), ima tendenciju da generalizuje umjesto da nađe stvaran
-problem — glatka sesija nema šta da nauči. Svaki kandidat koji se ne može
-vezati za konkretan trenutak u sesiji se odbacuje, ne usvaja.
 
 ---
 
@@ -975,6 +952,9 @@ D-4  Kad se presedan krši (npr. jedan fajl postaje "sve-u-jednom" mjesto
      OUT_OF_SCOPE_FINDING — ne čeka se da se umnoži.
 D-5  Refaktorisanje je zaseban task sa sopstvenim kontraktom, ne usputna
      izmjena u feature tasku.
+D-6  Wide refactor (mehanička izmjena velikog blast radiusa) ide
+     expand–contract: novi oblik pored starog → migracija u serijama →
+     uklanjanje starog. Ne forsira se u jedan zeleni diff (§8.5).
 ```
 
 ---
@@ -1077,6 +1057,64 @@ ili pravila mora navesti i šta se uklanja ili pojednostavljuje, ili
 eksplicitno obrazložiti zašto ništa. Standard koji samo raste prestaje da
 se čita.
 
+### 17.4 Periodična retrospektiva procesa
+
+Povremeno se radi **read-only retrospektiva** nad stvarnim prethodnim
+sesijama/taskovima. Cilj nije ocjena koda (to je review) nego otkrivanje
+frikcije koja se ne vidi iz finalnog PASS/DONE: gdje je agent lutao, šta je
+ponavljao, koji guard je trebao postojati, koja instrukcija ne radi ništa.
+
+Triggeri (bilo koji):
+
+```text
+- poslije problematičnog taska ili proceduralnog incidenta
+- nakon 5–10 reprezentativnih taskova
+- kada raste human attention, broj fix rundi ili tool/context trošak
+- kada agent ponovi istu grešku
+```
+
+Retro analizira kategorije:
+
+```text
+navigacija kroz repo        — da li je traženje fajla/informacije trajalo
+ponovljena čitanja          — izgubljen context, ponovni rad
+context loss                — poslije compactiona ili nove sesije
+nedostajući automated check — postoji check, ali nije povezan
+guardrail rupa              — repo bez ijednog guarda je sam po sebi nalaz
+AGENTS.md / steering        — instrukcije koje ne mijenjaju ponašanje
+tool economy                — skupi tool callovi, token waste
+nedostupna informacija      — šta agent nije mogao dohvatiti
+ručni korak                 — može li postati deterministički (§2.4)
+ponovljena greška           — klasa koja traži guard (§13)
+```
+
+**Retro je advisory i human-in-the-loop.** Retro ne mijenja standard, ne
+mijenja guard, ne mijenja `AGENTS.md`, ne instalira skill i ne refaktoriše
+repo. On daje samo kandidate za odluku; Human Owner bira.
+
+Zašto: automatsko samoispravljanje vlastitih guardova i instrukcija nosi
+rizik drifta — lažni pozitiv → popravka → novi lažni pozitiv → nova
+popravka. Zato je izmjena guarda uvijek zaseban task (H5), a retro samo
+predlaže.
+
+Output je lista `RETRO FINDING` zapisa; stabilna oznaka nalaza je `RF-<n>`:
+
+```yaml
+RF-<n>:
+  problem:            # šta se stvarno desilo u sesiji
+  evidence:           # konkretan trenutak/sesija, ne opšta preporuka
+  frequency:          # jednom | ponavlja se (koliko puta)
+  impact:             # na šta je uticalo (vrijeme, tačnost, trošak)
+  current_workaround: # kako se sada zaobilazi, ako se zaobilazi
+  candidate_action:   # KEEP | SIMPLIFY | GUARD | SKILL | DOCUMENT | REMOVE | NO_ACTION
+  expected_benefit:
+  false_positive_risk:
+  human_decision: PENDING
+```
+
+Pravilo protiv izmišljanja: svaki nalaz mora pokazati na konkretan moment
+sesije. Nalaz koji se ne može vezati za konkretan događaj se odbacuje.
+
 ---
 
 ## 18. Zabranjeni obrasci
@@ -1136,7 +1174,6 @@ Self-check
 Šta NIJE provjereno
 Otvoreni findinzi / OUT_OF_SCOPE_FINDING
 Rollback (MEDIUM/HIGH)
-Merge danger (reversibility + blast radius — izvedeno iz risk/rollback, §10.2)
 Sljedeći korak
 ```
 
@@ -1286,48 +1323,111 @@ Izvor: nezavisni review v1.0 (ChatGPT), provjeren protiv FlowOS iskustva.
 Odbijeno iz reviewa: uvođenje petog završnog stanja (DONE_WITH_BASELINE_EXCEPTION).
 Ostaju četiri stanja; izuzetak je projektni waiver uz DONE.
 
-### C.5 Promjene v1.1 → v1.2
+---
 
-Izvor: istraživanje Matt Pocock Skills v1.3 (transkript + primarni izvor
-github.com/mattpocock/skills, PR #1120, SKILL.md i docs/engineering/*.md
-pročitani direktno), nezavisno provjereno protiv akademske/industrijske
-literature o orkestraciji i protiv Cognition "Don't Build Multi-Agents".
-Cilj NIJE bio preuzimanje Pocockovog workflow-a; usvojeno je samo ono što
-je nezavisno potvrđeno kao stvarno poboljšanje. Nezavisno potvrđeno i
-drugim, paralelno nastalim candidate-om (gotovo identični zaključci,
-drugačiji plasman sekcija — vidi arhiviranu kopiju,
-`archive/STANDARD_RADA_SA_AI_AGENTIMA_v1.1_CANDIDATE.md`). Usvojeno od
-Human Ownera 2026-10-08.
+## Prilog D — Predložene promjene (v1.1-candidate)
 
-| # | Šta je dodano | Zašto | Dokaz | Status |
-|---|---|---|---|---|
-| A2 | §6.7 Deterministic orkestracija prije agent-orkestracije | poznat/ponovljiv proces je pouzdaniji kao skript nego kao agent koji uživo orkestrira | primarni izvor (docs/engineering/implement-spec.md) + nezavisna 2026 akademska literatura o pouzdanosti deterministic vs LLM orkestracije | ADOPTED |
-| A3 | §10.2 `merge_danger` (reversibility + blast radius), Prilog A.1 linija | sažet, skenabilan signal Human Owneru TAČNO na mjestu merge odluke, izveden iz postojećeg risk/rollback-a, ne nova analiza | primarni izvor (skills/engineering/pr/SKILL.md, stvaran primjer u PR #1120) + nezavisan okvir (Bezos one-way/two-way door, 1997/2015, pre-postojeći) | ADOPTED |
-| A4 | §13.2 Periodična retrospektiva sesija | §13.1 eskalacija zavisi od slučajnog primjećivanja ponavljanja; retro gleda SESIJU (ne samo ponovljene nalaze kroz taskove) i ima imenovane kategorije koje nam nedostaju (tool economy, no-ops, AGENTS.md veličina kao nalaz) | primarni izvor (skills/engineering/retro/SKILL.md + docs/engineering/retro.md, uklj. autorovo priznanje rizika "generic advice"/akumulacije bez čišćenja) + nezavisna decenijska retrospective/postmortem praksa u SWE | ADOPTED |
-| A1 | §8.5 Task graph za velike planove (opciono) | §8.2/§8.3 već imaju DEPENDENCY tip i provjeru zavisnosti, ali nema imenovane graph+frontier tehnike za VELIKE planove sa mnogo među-zavisnih taskova | primarni izvor (implement-spec SKILL.md/docs) + nezavisna decenijska CS literatura o task graphs/build sistemima (Bazel, Nx, Turborepo) | ADOPTED |
-| — | §7.1 opcioni domain `GLOSSARY.md` | uža primjena postojećeg §7.1 principa (samo ono što agent ne može zaključiti) na terminologiju, kad je terminologija DOKAZANO problem | primarni izvor (docs/engineering/domain-modeling.md, GLOSSARY.md rename rationale) + već postojeća ETH Zürich citacija u našem §7.1 (isti zaključak, drugi ugao) | ADOPTED |
+> Numeracija "v1.1-candidate" je po zahtjevu zadatka. Stvarna baza je
+> `STANDARD.md` v1.1 (usvojeni kanon); v1.0 postoji samo kao arhivska
+> kopija. Ako se candidate prihvati, preporučeno numerisanje je v1.2.
 
-Razmotreno i ODBAČENO (ADDS > vrijednost, ili već pokriveno, ili suprotno
-postojećoj lekciji):
+### D.1 A1 — Program-level task graph (§8.5, §14 D-6)
 
 ```text
-implement-spec cijeli workflow (paralelni implementer subagenti kao
-  default, draft PR logika, jedan code-review na kraju) — suprotno §2.1
-  single-agent-first i Cognition "Don't Build Multi-Agents"; autorov
-  sopstveni repo dokumentuje stvaran primjer kolizije (dva paralelna
-  tiketa nezavisno nazvala isto polje blockedSince/blockedOn) — rizik
-  nije hipotetski, materijalizovao se
-automatizovan/model-invoked retro — i Pocockov retro ima
-  disable-model-invocation: true; primarni izvor i naš zadatak se slažu
-  da automatizacija vodi u generičke/nerelevantne nalaze
-numerički risk score — nije predložen od strane Pococka (koristi
-  kategorijske labele, ne brojeve); naš §3 ostaje deterministički
-  checklist bez brojeva
+ADDS:            uslovni program-level model spec → taskovi → graf
+                 zavisnosti → READY frontier → integration grana →
+                 whole-program verification; expand–contract za wide refactor
+WHY:             veliki planovi se danas koordiniraju improvizovanom
+                 listom u chatu; frontier i blokade nisu eksplicitni
+EVIDENCE:        mattpocock/skills v1.3.1: to-tickets (blocking edges,
+                 frontier, tracer bullet, expand–contract) i implement-spec
+                 (task graph, frontier, integration branch); nezavisno: DAG
+                 scheduling / critical path, GitHub Spec Kit, tracer bullets
+REMOVES/SIMPL.:  ne uvodi se novi obavezni korak za obične taskove; zamjenjuje
+                 improvizovanu koordinaciju eksplicitnim, determinističkim
+                 prikazom grafa; ne zahtijeva subagent orkestrator
+STATUS:          PROPOSED
 ```
 
-Nema uklonjenih ni pojednostavljenih pravila u ovoj reviziji — sve
-dodato je ili nova, uska opcija (A1, GLOSSARY) ili operacionalizacija
-postojećeg principa (A2 iz §6.1/§17.2, A3 iz §3/§5.2, A4 iz §13.1/§6.6).
+### D.2 A2 — Deterministička orkestracija prije agentske (§2.4)
+
+```text
+ADDS:            princip: poznat proces → deterministički kod/loop;
+                 nepoznat problem → agentsko rezonovanje
+WHY:             agentski koordinator odluta, troši tokene i nema stabilan
+                 exit kod; deterministički loop je jeftiniji i ponovljiv
+EVIDENCE:        implement-spec docs ("a deterministic loop ... is faster,
+                 cheaper, and more reliable"); Anthropic Building Effective
+                 Agents (workflow = predefined code paths; simplicity);
+                 Cognition Don't Build Multi-Agents
+REMOVES/SIMPL.:  ne dodaje korak; sprječava nepotrebnu agentsku
+                 orkestraciju i povezuje postojeći §6 sa izborom mehanizma
+STATUS:          PROPOSED
+```
+
+### D.3 A3 — Merge decision brief (§11.4)
+
+```text
+ADDS:            Reversibility (TWO-WAY/ONE-WAY) + Blast radius
+                 (SMALL/MEDIUM/LARGE) + Evidence before→after + Rollback
+WHY:             Human Owner odluka o mergeu danas nema kratak, čitljiv
+                 sažetak; risk i rollback postoje, ali nisu na mjestu odluke
+EVIDENCE:        mattpocock/skills v1.3.1 pr skill (Merge Danger = door +
+                 blast radius); Bezos 2016 letter (one-way/two-way doors);
+                 SRE/DORA praksa blast radiusa i malih serija
+REMOVES/SIMPL.:  ne uvodi numerički score; sažima postojeći §3 risk i
+                 rollback, ne duplira ih
+STATUS:          PROPOSED
+```
+
+### D.4 A4 — Periodična retrospektiva procesa (§17.4, §13.1)
+
+```text
+ADDS:            read-only, advisory retro nad stvarnim sesijama, sa
+                 triggerima, kategorijama frikcije i RETRO FINDING izlazom
+WHY:             finalni PASS/DONE skriva frikciju (lutanje, token waste,
+                 neaktivne instrukcije, guardrail rupe); §13 reaguje na
+                 ponovljen finding, ali nema periodični izvor nalaza
+EVIDENCE:        mattpocock/skills v1.3.1 retro skill i docs ("It only
+                 proposes; nothing changes until you pick a candidate",
+                 human-in-the-loop, user-invoked); Scrum/Kerth retrospektiva
+REMOVES/SIMPL.:  zamjenjuje ad-hoc "naučene lekcije" periodičnom procedurom;
+                 ne dozvoljava automatsku izmjenu guarda (ostaje H5 task)
+STATUS:          PROPOSED
+```
+
+### D.5 A5 — Opcioni domen glossary (§7.6)
+
+```text
+ADDS:            opcioni GLOSSARY.md za projekte sa dokazano problematičnom
+                 terminologijom; definicija + _Avoid_ sinonimi; bez
+                 implementacionih detalja
+WHY:             agent troši riječi i griješi kad pojmovi nisu precizni;
+                 domenski rječnik smanjuje višeznačnost
+EVIDENCE:        mattpocock/skills v1.3.1 domain-modeling + GLOSSARY-FORMAT
+                 (i v1.3.0 rename CONTEXT.md → GLOSSARY.md); DDD/Evans
+                 ubiquitous language; ETH Zurich / Chroma Context Rot —
+                 veliki context fajl škodi, pa glossary mora biti odvojen
+                 i on-demand, a ne u AGENTS.md
+REMOVES/SIMPL.:  drži domenska pravila izvan AGENTS.md (§7.1), čime se
+                 AGENTS.md ne deblja; uvodi se samo tamo gdje postoji dokaz
+STATUS:          PROPOSED
+```
+
+### D.6 Odbijeno / nije ušlo u candidate
+
+```text
+- implement-spec multi-agent default (orkestrator + implementer subagenti
+  u worktreeovima): protivno single-agent-first (§2.1); zadržan samo
+  program-level task graph kao uslovni model, bez obaveznog subagenta.
+- "fresh worker po podtasku" i brainstorming ritual za jasan task: već
+  odbačeno iskustvom.
+- Automatska izmjena guardova/instrukcija iz retro nalaza: nosi drift rizik.
+- Numerički merge risk score: nema dokazane koristi nad tri riječi.
+- Context pointer kao obavezno pravilo: koristan, ali nema dovoljno dokaza
+  da zaslužuje obavezan korak; ostaje kao dobra praksa u reportu/progress
+  fajlu.
+```
 
 ---
 
@@ -1359,13 +1459,17 @@ Kvalitet, dug, produktivnost:
 Sigurnost:
 - Simon Willison: The lethal trifecta — https://conffab.com/elsewhere/the-lethal-trifecta-for-ai-agents-private-data-untrusted-content-and-external-communication/
 
-Istraživanje za v1.2 (Matt Pocock Skills v1.3, 2026-10-08):
-- mattpocock/skills, primarni repo — https://github.com/mattpocock/skills
-- v1.3 graduation PR (implement-spec, pr, retro) — https://github.com/mattpocock/skills/pull/1120
-- implement-spec, SKILL.md i docs — https://github.com/mattpocock/skills/blob/main/skills/engineering/implement-spec/SKILL.md ; https://github.com/mattpocock/skills/blob/main/docs/engineering/implement-spec.md
-- pr skill, SKILL.md (kredit: Dex Horthy/Humanlayer "show-me") — https://github.com/mattpocock/skills/blob/main/skills/engineering/pr/SKILL.md
-- retro, SKILL.md i docs (uklj. priznate slabosti skilla) — https://github.com/mattpocock/skills/blob/main/skills/engineering/retro/SKILL.md ; https://github.com/mattpocock/skills/blob/main/docs/engineering/retro.md
-- domain-modeling / GLOSSARY.md rename rationale — https://github.com/mattpocock/skills/blob/main/docs/engineering/domain-modeling.md
-- Bezos one-way/two-way door okvir, nezavisan od Pococka (1997/2015) — https://rcmlabs.io/blog/one-way-door-two-way-door-type-1-type-2-decisions/
-- Deterministic vs LLM-controlled orchestration, nezavisna akademska evaluacija (2026) — https://arxiv.org/html/2605.09894v1 ; https://arxiv.org/pdf/2607.07727
-- Task-based parallelism / build-system task graphs (Bazel, Nx, Turborepo) — https://hpc2n.github.io/Task-based-parallelism/branch/master/motivation/
+Novi izvori (v1.1-candidate):
+- mattpocock/skills v1.3.1, engineering skills (implement-spec, pr, retro,
+  domain-modeling, to-tickets) — https://github.com/mattpocock/skills/tree/v1.3.1/skills/engineering
+- mattpocock/skills CHANGELOG v1.3.0 (implement-spec/pr/retro graduate;
+  CONTEXT.md → GLOSSARY.md) — https://github.com/mattpocock/skills/blob/v1.3.1/CHANGELOG.md
+- Sandcastle, deterministički loop za AFK rad — https://github.com/mattpocock/sandcastle
+- Anthropic: Building effective agents (workflow = predefined code paths;
+  simplicity) — https://www.anthropic.com/engineering/building-effective-agents
+- Bezos 2016 shareholder letter (one-way vs two-way doors) —
+  https://www.aboutamazon.com/news/company-news/2016-letter-to-shareholders
+- Chroma: Context Rot — https://research.trychroma.com/context-rot
+- Liu et al., Lost in the Middle — https://arxiv.org/abs/2307.03172
+- Sakana AI: Darwin Gödel Machine (samousavršavanje i rizik drifta) —
+  https://sakana.ai/dgm/
