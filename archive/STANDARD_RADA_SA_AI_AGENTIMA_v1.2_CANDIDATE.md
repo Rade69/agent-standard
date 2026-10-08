@@ -15,6 +15,18 @@ canonical_location: "~/agent-standard/STANDARD.md (v1.1, trenutno usvojena verzi
 > ne Pocockov workflow kao paket. Puna lista promjena i razloga je u
 > Prilogu C.5. Dok Human Owner ne odluči, `~/agent-standard/STANDARD.md`
 > (v1.1) ostaje jedini kanonski, operativni standard.
+>
+> **Nezavisna potvrda (2026-10-08).** Paralelno s ovim radom, u istom
+> repou je zatečen drugi, nezavisno nastao candidate
+> (`~/agent-standard/STANDARD_RADA_SA_AI_AGENTIMA_v1.1_CANDIDATE.md`,
+> untracked, pun rewrite — ne patch). Zaključci se gotovo potpuno
+> poklapaju: iste 4 PROPOSED izmjene (task graph za velike planove,
+> deterministička orkestracija prije agentske, merge danger
+> reversibility+blast radius, periodična retrospektiva) + opcioni
+> glossary, sa skoro identičnom A2 formulacijom. Razlika je samo u
+> plasmanu sekcija (njihov §2.4/§11.4/§17.4 vs ovaj §6.7/§10.2/§13.2).
+> Ni jedan fajl nije izmijenjen da se "pomiri" s drugim — Human Owner
+> bira koji plasman ide u finalni, usvojeni v1.2.
 
 # Standard rada sa AI agentima — v1.1
 
