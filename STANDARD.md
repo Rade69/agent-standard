@@ -1,20 +1,27 @@
 ---
 title: "Standard rada sa AI agentima"
-version: "1.2"
-date: "2026-10-08"
-status: "USVOJENA KANONSKA VERZIJA (Human Owner, 2026-10-08)"
-supersedes: "STANDARD_RADA_SA_AI_AGENTIMA v1.1"
+version: "1.3"
+date: "2026-10-12"
+status: "USVOJENA KANONSKA VERZIJA (Human Owner, 2026-10-12)"
+supersedes: "STANDARD_RADA_SA_AI_AGENTIMA v1.2"
 authority: "Human Owner"
 scope: "Svi projekti, svi modeli i harnessi"
-canonical_location: "~/agent-standard/STANDARD.md"
+audience: "Svaki developer ili tim koji radi sa AI coding agentima — usvajanje u §19"
+canonical_location: "STANDARD.md u repou agent-standard (lokalno obično ~/agent-standard/STANDARD.md)"
 ---
 
-# Standard rada sa AI agentima — v1.2
+# Standard rada sa AI agentima — v1.3
 
 > **Model radi. Mehanizam provodi. Evidence potvrđuje. Nezavisni reviewer
 > pokušava oboriti rezultat. Čovjek odlučuje.**
 
-Razlika u odnosu na v0.2 je u drugoj rečenici. v0.2 je ispravno opisivao
+Ovo je vendor-neutralan standard za rad sa AI coding agentima (Claude
+Code, Codex, Cursor, pi, crush, OpenCode i drugi): ko odlučuje, kako se
+određuje rizik, šta se smatra dokazom, kako izgleda nezavisni review i kako
+rad preživi promjenu sesije ili modela. Ko ga uzima prvi put, počinje od
+§19 (usvajanje), pa §0.
+
+Razlika u odnosu na ranu verziju (v0.2) je u drugoj rečenici. v0.2 je ispravno opisivao
 *kako* treba raditi, ali je gotovo sve ostavljao disciplini agenta. Iskustvo
 iz stvarnih projekata (vidi §15) i istraživanje (vidi Izvori) pokazuju isto:
 pravilo napisano u prozi, bez mehanizma koji ga provjerava, s vremenom
@@ -33,10 +40,11 @@ Agent ne čita cijeli standard za svaki task. Čita ovo:
 | LOW task | §4 red LOW, §9.1 |
 | MEDIUM task | §4, §5, §9, §10 |
 | HIGH task | §4, §5, §9, §10, §11, §12 |
-| Duga sesija / handoff | §7 |
+| Duga sesija / handoff / kompakcija | §7 (zone konteksta §7.4, checkpoint i SELF HANDOFF §7.6) |
 | Paralelni rad | §8 |
 | Review | §10 |
 | Pisanje/izmjena guarda ili hooka | §6 |
+| Prvo usvajanje standarda (developer, tim) | §19 |
 
 Ostalo se čita kad se pojavi potreba. Ovo je isto pravilo kao za kod
 (just-in-time retrieval), primijenjeno na sam standard.
@@ -504,40 +512,226 @@ Početni ritual svake sesije (MEDIUM/HIGH ili nastavak):
 Korak 3 je bitan: ako je stanje već crveno prije rada, to se zapisuje, da
 se kasnije ne pripiše sopstvenoj izmjeni.
 
-### 7.3 Context strategija
+### 7.3 Context strategija i podjela odgovornosti
+
+Context se planira kao ograničen resurs, ne kao beskonačna memorija. Cilj
+nije što duže držati jednu sesiju, nego sačuvati dovoljno čist mentalni
+model da agent pouzdano završava ograničen tehnički rad.
+
+```text
+agent                  prepoznaje prirodnu granicu rada i bira dobar trenutak
+                       za checkpoint/kompakciju unutar dozvoljene zone
+harness / alat         daje signal popunjenosti, upozorenje i krajnju
+                       sigurnosnu granicu, gdje to podržava
+Task Contract +        čuvaju goal, granice, evidence i otvoreno stanje
+trajni artefakti       nezavisno od sesije
+```
 
 | Strategija | Kada | Checkpoint |
 |---|---|---|
-| SHORT | jedna sesija, mali diff, jasan test | nije potreban |
-| MEDIUM | više faza, moguć compaction | na prvoj prirodnoj granici |
-| LONG | više slice-ova, vjerovatna nova sesija | 2–4 unaprijed definisana |
+| SHORT | jedna sesija, malo fajlova, mali diff, jasan test | obično nije potreban |
+| MEDIUM | više faza, bar jedna prirodna granica, moguća kompakcija | na kraju prve velike provjerljive cjeline |
+| LONG | više slice-ova, širok research ili više podsistema, vjerovatna nova sesija ili model | 2–4 unaprijed definisana (npr. A dizajn, B prvi slice zelen, C implementacija gotova prije širokog verify-a, D handoff) |
 
-Context je ograničen resurs; kvalitet opada kako se prozor puni. Ako alat
-prikazuje popunjenost, orijentaciono:
+Pravila prelaza:
 
 ```text
-<65%     normalno
-65–85%   ne počinji novi veliki podproblem; traži prirodnu granicu
->85%     završi atomic korak → checkpoint → compact ili nova sesija
+SHORT koji neočekivano preraste u više faza → tretira se kao MEDIUM i dobija
+  checkpoint prije sljedećeg velikog podproblema.
+MEDIUM se ne kompaktuje samo zato što kompakcija postoji: ako je mentalni
+  model čist i sljedeći korak mali, radi se do prirodne granice.
+LONG se ne "gura" kroz jednu sesiju samo zato što tehnički ima mjesta:
+  stabilan checkpoint prije velikog prelaza je bolji od kasne kompakcije
+  poslije degradacije konteksta.
 ```
 
-Pragovi su signal, ne dogma. Alat-specifično pravilo ima prednost.
+### 7.4 Zone popunjenosti — signal, ne dogma
 
-### 7.4 Checkpoint
+Ako alat prikazuje popunjenost konteksta, početna politika je:
 
-Checkpoint je engineering handoff, ne dnevnik. Šablon u Prilogu A.4.
-Neprovjerena tvrdnja nosi oznaku `UNVERIFIED`. Checkpoint ne pretvara claim
-u činjenicu i ne skriva otvoreni finding.
+```text
+0–65%    NORMAL
+65–75%   SOFT
+75–85%   WARNING
+85%+     HARD
+```
 
-### 7.5 Reorientation poslije compactiona ili nove sesije
+Procenti nisu univerzalni. Alat-specifična rezerva tokena ili pouzdaniji
+prag imaju prednost. **Ako alat ne prikazuje pouzdanu popunjenost, agent ne
+izmišlja procenat** — radi po prirodnim okidačima (§7.5) i ugrađenim
+upozorenjima alata.
 
-Prije bilo kakve izmjene agent navede: goal, current state, granice,
-relevantne fajlove, šta je dokazano, šta nije, otvorene findinge, sljedeću
-atomic akciju. Zatim read-only provjeri git status i diff. Kod se ne mijenja
-dok mentalni model nije potvrđen.
+| Zona | Agent smije | Agent ne smije | Obavezno |
+|---|---|---|---|
+| NORMAL | istraživanje, čitanje, implementacija, novi atomski korak | — | — |
+| SOFT | nastaviti tekući atomski korak; sam pokrenuti kompakciju ako je trenutak dobar | praviti checkpoint usred trivijalnog koraka samo zbog procenta | procijeniti blizinu prirodne granice; na njoj checkpoint |
+| WARNING | završiti tekući bezbjedni atomski korak | otvoriti novi veliki research/refactor/feature slice; "još imam mjesta" kao razlog | checkpoint; kompakcija odmah ili na prvoj prirodnoj granici |
+| HARD | samo minimalno da write/transakcija/refactor ne ostanu nekonzistentni | novi research, otvaranje velikog fajla radi šire istrage, novi refactor ili slice, "još samo jedan pokušaj" | checkpoint + SELF HANDOFF → kompakcija ili HANDOFF; poslije nastavka reorijentacija (§7.8) |
+
+SOFT i WARNING su zona **agentove procjene**: agent bira prirodnu granicu.
+HARD je **deterministička sigurnosna mreža**: agentova procjena je ne može
+poništiti. Ako harness podržava, poslije HARD praga smije blokirati nove
+nepotrebne tool callove i dozvoliti samo checkpoint, kompakciju ili
+bezbjedan završetak tekućeg atomskog koraka.
+
+### 7.5 Okidači i prirodna granica
+
+Dobri okidači za checkpoint:
+
+```text
+dizajn programa završen
+prvi vertical slice zelen
+važna pretpostavka oborena
+implementacija gotova, počinje verify/review
+promijenjena odobrena tehnička odluka unutar scope-a
+slijedi novi veliki podproblem
+kontekst ulazi u WARNING
+mijenja se agent, model, harness ili sesija
+rad se prekida i nastavlja kasnije
+```
+
+Checkpoint se ne pravi samo zato što je prošlo vrijeme ili je pročitano
+nekoliko fajlova. Između SOFT i WARNING prednost ima prirodna granica
+(reproducer potvrđen, plan gotov, slice zelen, logička cjelina commitovana,
+implementacija gotova prije verify-a, verify gotov prije reviewa) — ne čeka
+se HARD ako je granica već tu.
+
+### 7.6 Checkpoint i SELF HANDOFF
+
+Checkpoint je engineering handoff, ne dnevnik razgovora (šablon u Prilogu
+A.4). Njegova svrha: sljedeći kontekst — poslije kompakcije, nove sesije,
+promjene modela ili prekida — rekonstruiše tačno stanje bez čitanja starog
+chata.
+
+**SELF HANDOFF** je kratak dodatak checkpointu koji agentu poslije
+kompakcije kaže kako da ponovo krene. Ne ponavlja stanje; odgovara na tri
+pitanja:
+
+```text
+Prvo uradi:     jedna konkretna read-only ili atomska akcija
+Ne ponavljaj:   najvažniji već oboren pristup ili nepotrebno istraživanje
+Pazi na:        najvažniji otvoreni blocker, finding, rizik ili granicu ovlaštenja
+```
+
+Primjer:
+
+```text
+Prvo uradi:   provjeri git status i ponovo pokreni ciljani parser test na fixture-u X
+Ne ponavljaj: regex pristup za porijeklo — dokazano puca na višelinijskoj izjavi
+Pazi na:      ne mijenjati registry importera ni dijeljeni API parsera (van scope-a)
+```
+
+SELF HANDOFF nije novi izvor istine i ne sadrži nedokazane tvrdnje kao
+činjenice.
+
+Gdje checkpoint živi:
+
+```text
+ista sesija            strukturisana poruka ili summary kompakcije
+nova sesija / model    copy/paste checkpoint ili jedan mali handoff fajl
+vrlo dug task          JEDAN mutable *-working.md (progress fajl, §7.2),
+                       ažuriran na licu mjesta — ne novi fajl po checkpointu
+završen task           finalni report + Git istorija
+```
+
+Checkpoint ne smije: pretvoriti tvrdnju u činjenicu, označiti neizvršen test
+kao PASS, sakriti otvoreni finding, prepričavati chat, zamijeniti Task
+Contract, postati drugi izvor istine za arhitekturu, sam sebi dodijeliti
+DONE. Neprovjerena tvrdnja nosi oznaku `UNVERIFIED`.
+
+Checkpoint referencira evidence, ne zamjenjuje ga. "Testovi prolaze" u
+checkpointu mora imati: tačnu komandu, svjež rezultat, opseg testa i šta
+taj rezultat NE dokazuje.
+
+### 7.7 Kompakcija
+
+Kompakcija je korisna, ali gubi informaciju. Služi da smanji kontekst uz
+čuvanje stanja koje je potrebno za pouzdan nastavak — ne da produži sesiju
+po svaku cijenu.
+
+```text
+ne usred: atomskog write-a, DB transakcije, koraka migracije, refactora sa
+privremeno nekonzistentnim stanjem, multi-file rename/wiring koraka
+```
+
+Ako harness dopušta agentu da sam pokrene kompakciju:
+
+```text
+agent smije izabrati prirodnu tačku između SOFT i WARNING
+agent ne mora kompaktovati na prvi SOFT signal
+agent ne smije čekati HARD samo zato što tehnički ima mjesta
+agent ne smije ignorisati HARD
+agent PRVO sačuva checkpoint + SELF HANDOFF
+```
+
+Cilj je kombinacija: deterministički prag + agentova procjena prirodne
+granice + deterministički HARD fallback. Ni samo fiksni procenat, ni
+neograničena sloboda agenta.
+
+Instrukcija za kompakciju (vendor-neutralna; koristi se kao custom prompt
+gdje alat to dopušta, ili ručno prije ugrađene kompakcije):
+
+```text
+Sažmi sesiju kao engineering handoff.
+Sačuvaj: Goal, Granice ovlaštenja, Urađeno, Trenutno stanje, Ključne odluke,
+Oborene pretpostavke, Relevantne fajlove, Promijenjene fajlove, Evidence,
+Otvorene blokere/findinge, Sljedeću atomsku akciju, Ne ponavljati,
+SELF HANDOFF (Prvo uradi / Ne ponavljaj / Pazi na).
+Ne pretvaraj tvrdnju u činjenicu. Neprovjereno označi UNVERIFIED.
+Ne proglašavaj DONE zato što se sesija kompaktuje. Ne skrivaj blocker ni finding.
+```
+
+Ako alat ima kvalitetnu ugrađenu kompakciju koja se ne može prilagoditi, ne
+uvodi se workaround radi uniformnosti — checkpoint + SELF HANDOFF ostaju
+trajni ulaz za nastavak.
+
+### 7.8 Reorijentacija poslije kompakcije ili nove sesije
+
+Prije bilo kakve izmjene agent navede: goal, trenutno stanje, granice
+ovlaštenja, relevantne fajlove, šta je dokazano, šta nije, otvorene
+findinge/blokere, sljedeću atomsku akciju i SELF HANDOFF koji je naslijedio.
+
+Zatim read-only provjeri: identitet repoa, granu/worktree, `git status`,
+HEAD/base gdje je relevantno, relevantni diff i reference na evidence. Kod
+se ne mijenja dok mentalni model nije potvrđen.
+
+**Ako se checkpoint i stvarni repo/Git/evidence ne slažu, stvarno stanje ima
+prednost**: razlika se prijavljuje, agent je ne "pomiruje" nagađanjem.
 
 Handoff je dobar ako je **nastavljiv**: nova sesija bez starog chata može
 potvrditi stanje, ponoviti ključni evidence i imenovati sljedeći korak.
+
+### 7.9 Nova sesija i HANDOFF
+
+Kompakcija nije obavezan cilj. Ako je task na prirodnoj granici, a nova
+sesija daje čistiji mentalni model, ispravno je završiti sa `HANDOFF` i
+nastaviti iz checkpointa — posebno kad implementacija prelazi u nezavisni
+review, kad jedan model završava research a drugi implementira, kad kontekst
+nosi mnogo odbačenih pristupa, ili kad alat nema kvalitetnu kompakciju.
+
+**Handoff nije neuspjeh.** Agent ne pokušava završiti veliki korak samo zato
+što fizički još ima mjesta. `HANDOFF` sadrži: checkpoint + SELF HANDOFF +
+tačan repo/granu/worktree/HEAD + status otvorenog evidence-a i findinga.
+
+### 7.10 Mapiranje na konkretan alat
+
+Standard propisuje **ponašanje**, ne harness. Alati imaju različite
+mehanizme (automatska kompakcija, ručni compact, custom prompt kompakcije,
+mjerač konteksta, hook ili ekstenzija, nova sesija bez kontrole
+kompakcije). Projektni ili lični adapter smije mapirati §7.3–7.9 na svoj
+alat, ali ne smije promijeniti ove granice:
+
+```text
+SOFT/WARNING     agent bira prirodnu granicu
+HARD             agent ne nastavlja novi veliki rad
+checkpoint       obavezan prije gubitka stanja sesije
+reorijentacija   obavezna prije novog editovanja
+evidence > summary
+```
+
+Primjer (Claude Code): instrukcija iz §7.7 upisuje se u projektni
+`CLAUDE.md` pod naslovom o kompakciji, pa je koristi i automatska i ručna
+(`/compact`) kompakcija.
 
 ---
 
@@ -785,7 +979,8 @@ DONE             DoD zadovoljen, svjež evidence, nema otvorenog materijalnog fi
                  (uključuje DONE uz baseline waiver po §9.6, ako projekat dopušta)
 BLOCKED          konkretna prepreka van ovlaštenja: šta, dokaz, šta je pokušano
 NEEDS_DECISION   potrebna odluka o goal/scope/risk/arhitekturi/sigurnosti
-HANDOFF          task zdrav, sesija nije — checkpoint, ne DONE
+HANDOFF          task zdrav, sesija nije — checkpoint + SELF HANDOFF + repo/grana/HEAD,
+                 ne DONE (§7.9)
 ```
 
 ### 11.2 Stanja nisu ista stvar
@@ -1103,7 +1298,103 @@ DONE uz otvoren materijalan finding
 merge kao dokaz da integrisana cjelina radi
 sakrivena proceduralna greška
 izmišljanje alata koji repo nema
+novi veliki podproblem u HARD zoni konteksta
+izmišljen procenat popunjenosti konteksta
+kompakcija bez prethodnog checkpointa + SELF HANDOFF
 ```
+
+---
+
+## 19. Usvajanje standarda — za developera ili tim koji ga prvi put uzima
+
+Ovaj standard ne zavisi od jednog modela, alata ni projekta. Ova sekcija je
+uputstvo za nekoga ko ga prvi put prilagođava svom načinu rada.
+
+### 19.1 Šta standard jeste, a šta nije
+
+```text
+JESTE   procesni standard: uloge, rizik, ugovor taska, verifikacija,
+        nezavisni review, kontinuitet konteksta, ljudska odluka
+NIJE    sigurnosna arhitektura proizvoda (§12.1), coding style guide,
+        ni uputstvo za jedan konkretan alat
+```
+
+Pojmovi koji se koriste svuda: **Human Owner** (osoba koja odlučuje — kod
+solo developera to si ti), **invarijanta** (§1, ne može se oslabiti),
+**Task Contract** (§5), **verify gate** (§6.2, sloj 1), **evidence** (svjež
+izvršni dokaz, ne tvrdnja).
+
+### 19.2 Minimalni put — prvi dan
+
+```text
+1. Pročitaj §0, §1, §3 i §4 (oko 15 minuta). To je jezgro.
+2. Drži JEDNU kanonsku kopiju standarda (npr. klon ovog repoa na stalnoj
+   lokaciji). Projekti ga ne kopiraju — referenciraju verziju (§16).
+3. Globalni router za svoje agente: `python install.py --dry-run`, zatim
+   `--install`. Upisuje kratak blok (GLOBAL_ROUTER.md) u globalnu
+   konfiguraciju podržanih alata i ne dira ostatak tih fajlova.
+4. U svaki projekat: kratak AGENTS.md (§7.1) sa blokom koji upućuje na
+   standard i verziju, i `.agent-standard.yml` iz templates/ (verzija,
+   pooštrenja, uključeni gate-ovi, eventualna pisana delegacija merge-a).
+5. Jedna verify komanda koja vraća exit kod (lint + testovi). To je
+   Definition of Done (§6.2). Ako postoji CI, ista komanda ide u CI.
+6. Prvi stvarni task: kratki kontrakt (§5.1) i jedan nezavisni reviewer
+   (§2.2) — druga sesija ili drugi model bez implementerovog konteksta,
+   ili čovjek.
+```
+
+### 19.3 Prilagođavanje bez slabljenja
+
+| Smiješ | Ne smiješ |
+|---|---|
+| izabrati svoje alate i modele za svaku ulogu | oslabiti ili zaobići invarijante I-1 do I-8 |
+| pooštriti bilo koje pravilo u projektu | sniziti rizik bez Human Owner odluke (§3.4) |
+| podesiti pragove konteksta za svoj alat (§7.4) | ukloniti nezavisni review za MEDIUM/HIGH |
+| izostaviti opcione dijelove (§8.5, §13.2, glossary iz §7.1) | delegirati merge HIGH taska (I-3) |
+| preimenovati uloge ako jedna osoba ima više njih (uz I-1) | proglasiti "gotovo" bez exit koda verify komande (I-2) |
+| dodati vlastite guardove i validatore | slabiti guard/hook/verify da bi prošao (I-7) |
+
+Svako pooštrenje se upisuje u projektni AGENTS.md ili `.agent-standard.yml`,
+da ga vide i drugi agenti i ljudi.
+
+### 19.4 Solo developer
+
+Human Owner si ti. Nezavisni reviewer je druga sesija ili drugi model koji
+dobija samo Task Contract, diff i repo (§2.2) — ne chat implementera. Za
+HIGH task drugi, specijalizovani review (§4.1) može biti i tvoja ručna
+provjera po checklisti B.3, ali tada to piše u reportu.
+
+### 19.5 Postupno uvođenje
+
+Ne uvoditi sve odjednom. Redoslijed koji se pokazao održivim:
+
+```text
+1. invarijante + risk checklist (§1, §3)
+2. jedna verify komanda kao DoD (§6.2)
+3. nezavisni review sa verdict formatom (§10)
+4. checkpoint i reorijentacija za duge sesije (§7.3–7.9)
+5. validatori procesa i mapa provođenja (§6.3–6.5)
+6. mjerenje i uklanjanje procesa (§17)
+```
+
+Svaki korak se zadržava samo ako na 5–10 stvarnih taskova smanji
+ponovljene greške, rework ili ljudsku pažnju (§17.2).
+
+### 19.6 Mapiranje na alate
+
+| Alat | Globalni router (install.py) | Projektna pravila | Kompakcija (§7.7) |
+|---|---|---|---|
+| Claude Code | `~/.claude/CLAUDE.md` | `CLAUDE.md` (može uvoziti AGENTS.md) | instrukcija u projektnom `CLAUDE.md`; ručno `/compact` |
+| Codex | `$CODEX_HOME/AGENTS.md` | `AGENTS.md` | po mogućnostima alata, inače checkpoint + nova sesija |
+| pi | `~/.pi/agent/APPEND_SYSTEM.md` | `AGENTS.md` | isto |
+| crush | `~/.config/crush/CRUSH.md` | `AGENTS.md` | isto |
+| OpenCode | `~/.config/opencode/instructions.md` | `AGENTS.md` | isto |
+| alati bez globalnog fajla (npr. Cursor) | — | `AGENTS.md` u projektu | checkpoint + nova sesija |
+
+Putanje su one koje `install.py` danas koristi; provjeri ih sa
+`--dry-run` za svoje okruženje. Ako alat nije u tabeli, dovoljan je
+projektni AGENTS.md blok — standard je napisan tako da radi i bez
+globalnog routera.
 
 ---
 
@@ -1171,6 +1462,10 @@ proposed_task:
 ### Otvoreni findinzi / blokeri
 ### Sljedeća atomic akcija
 ### Ne ponavljati (pokušano X → nije radilo jer ...)
+### SELF HANDOFF
+- Prvo uradi:
+- Ne ponavljaj:
+- Pazi na:
 ```
 
 ### A.5 Operativni završetak odgovora
@@ -1229,9 +1524,9 @@ SLJEDEĆE:  jedna konkretna akcija i uloga
 
 ---
 
-## Prilog C — Promjene u odnosu na v0.2
+## Prilog C — Istorija promjena
 
-### C.1 Ispravljene kontradikcije
+### C.1 v0.2 → v1.0: ispravljene kontradikcije
 
 | v0.2 | Problem | v1.0 |
 |---|---|---|
@@ -1242,7 +1537,7 @@ SLJEDEĆE:  jedna konkretna akcija i uloga
 | §9 just-in-time retrieval, a cijeli standard obavezan za svaki task | standard krši vlastito pravilo | brza staza (§0) |
 | §13 "ne commitovati secret" kao jedina sigurnosna mjera | lažan utisak da je to dovoljno | §12: procesni ≠ sigurnosni standard, slojevi, trifecta |
 
-### C.2 Novo
+### C.2 v0.2 → v1.0: novo
 
 ```text
 §0   brza staza
@@ -1261,7 +1556,7 @@ SLJEDEĆE:  jedna konkretna akcija i uloga
 §17  metrike vezane za cilj + kontrateg dodavanju
 ```
 
-### C.3 Uklonjeno ili sažeto
+### C.3 v0.2 → v1.0: uklonjeno ili sažeto
 
 ```text
 Duplirani opisi review toka (v0.2 §3.4, §16.2, §27) → jedan tok u §10.1
@@ -1328,6 +1623,37 @@ numerički risk score — nije predložen od strane Pococka (koristi
 Nema uklonjenih ni pojednostavljenih pravila u ovoj reviziji — sve
 dodato je ili nova, uska opcija (A1, GLOSSARY) ili operacionalizacija
 postojećeg principa (A2 iz §6.1/§17.2, A3 iz §3/§5.2, A4 iz §13.1/§6.6).
+
+
+### C.6 Promjene v1.2 → v1.3
+
+Izvor: dopuna context managementa u opštem standardu (sekcije 6–8,
+2026-10-12) i potreba da standard bude upotrebljiv drugim developerima
+bez ličnog konteksta autora. Usvojeno od Human Ownera 2026-10-12.
+
+Iz te dopune preuzet je samo context management; ostatak tog dokumenta
+pripada liniji prije v1.0 i nije preuzet, jer bi uklonio invarijante,
+deterministički risk checklist, mehaničko provođenje i sigurnosni dio.
+
+| Mjesto | v1.2 | v1.3 | Razlog |
+|---|---|---|---|
+| §7.3 | tabela SHORT/MEDIUM/LONG | + podjela odgovornosti agent/alat/artefakti; pravila prelaza (SHORT→MEDIUM, ne kompaktovati "jer može", ne "gurati" LONG) | strategija se mijenjala u toku rada bez pravila |
+| §7.4 | 3 zone (<65 / 65–85 / >85) | 4 zone NORMAL/SOFT/WARNING/HARD sa ponašanjem po zoni; HARD je deterministički i agent ga ne poništava; bez izmišljanja procenta | zona 65–85 nije razlikovala "približi se granici" od "ne otvaraj ništa novo" |
+| §7.5 | — | okidači za checkpoint; prirodna granica ima prednost nad slijepim pragom | checkpoint po procentu presijeca atomske korake |
+| §7.6 | checkpoint šablon | + SELF HANDOFF (Prvo uradi / Ne ponavljaj / Pazi na); gdje checkpoint živi; "testovi prolaze" mora imati komandu, rezultat, opseg i šta ne dokazuje | nije bilo propisano kako agent ponovo kreće poslije kompakcije |
+| §7.7 | — | pravila kompakcije, vendor-neutralna instrukcija, HARD fallback | kompakcija usred atomskog koraka ostavlja nekonzistentno stanje |
+| §7.8 | reorijentacija | + naslijeđeni SELF HANDOFF; stvarni repo/Git ima prednost nad checkpointom | checkpoint može biti netačan |
+| §7.9 | — | nova sesija je validna optimizacija; handoff nije neuspjeh | — |
+| §7.10 | — | mapiranje na alat ne smije promijeniti granice | — |
+| §11.1 | HANDOFF = checkpoint | HANDOFF = checkpoint + SELF HANDOFF + repo/grana/HEAD | — |
+| §18 | — | + novi veliki rad u HARD zoni, izmišljen procenat konteksta, kompakcija bez checkpointa | — |
+| §19 | — | usvajanje standarda za novog developera ili tim | standard se dijeli sa drugima |
+| Prilog A.4 | checkpoint šablon | + SELF HANDOFF | — |
+
+Uklonjeno ili pojednostavljeno: ništa. §17.3 je ispunjen time što je
+dopuna zamijenila stare §7.3–7.5 umjesto da ide pored njih, a §19 je
+namijenjen samo onome ko standard prvi put usvaja (§0 ga ne traži za
+svakodnevni rad).
 
 ---
 
