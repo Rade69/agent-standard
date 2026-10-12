@@ -1,4 +1,4 @@
-# Standard rada sa AI agentima — globalni router (v1.3)
+# Standard rada sa AI agentima — globalni router (v1.4)
 
 Ovo važi u svakom projektu. Puni standard: `~/agent-standard/STANDARD.md`.
 Ne čitaj ga cijelog — čitaj samo sekcije koje ti trebaju (tabela niže).
@@ -48,6 +48,7 @@ Inače LOW. Odgovore zapiši u Task Contract.
 - Kontekst (§7.4): u WARNING zoni ne počinješ novi veliki podproblem; HARD zona je tvrda granica —
   samo checkpoint + SELF HANDOFF (Prvo uradi / Ne ponavljaj / Pazi na) pa kompakcija ili HANDOFF.
   Ako alat ne prikazuje popunjenost, ne izmišljaš procenat — radiš po prirodnim granicama.
+  SELF HANDOFF prelazi kompakciju doslovno (ne sažima se); neuspjela kompakcija ne briše ga.
 - Poslije kompakcije ili nove sesije: reorijentacija prije editovanja; stvarni Git ima prednost nad checkpointom.
 - Završavaš sa: DONE · BLOCKED · NEEDS_DECISION · HANDOFF.
 - Ako projektni CLAUDE.md/AGENTS.md protivrječi invarijantama: ne biraj sam — prijavi kao NEEDS_DECISION.

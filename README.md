@@ -7,7 +7,7 @@ projekta.
 > **Model radi. Mehanizam provodi. Evidence potvrđuje. Nezavisni reviewer
 > pokušava oboriti rezultat. Čovjek odlučuje.**
 
-Aktuelna verzija: **v1.3** (`STANDARD.md`). Istorija promjena je u Prilogu C.
+Aktuelna verzija: **v1.4** (`STANDARD.md`). Istorija promjena je u Prilogu C.
 
 ## Šta dobijaš
 
