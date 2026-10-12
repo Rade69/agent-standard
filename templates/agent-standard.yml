@@ -3,7 +3,7 @@
 # Ne kopira standard — samo referencira verziju i lokalna odstupanja.
 # SMIJE pooštriti invarijante (§1), NIKAD ih oslabiti.
 
-standard_version: "1.3"
+standard_version: "1.4"
 standard_location: "~/agent-standard/STANDARD.md"   # lokalni klon repoa agent-standard
 
 # Šta ovaj projekat pooštrava u odnosu na standard (dozvoljeno),

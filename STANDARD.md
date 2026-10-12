@@ -1,16 +1,16 @@
 ---
 title: "Standard rada sa AI agentima"
-version: "1.3"
+version: "1.4"
 date: "2026-10-12"
 status: "USVOJENA KANONSKA VERZIJA (Human Owner, 2026-10-12)"
-supersedes: "STANDARD_RADA_SA_AI_AGENTIMA v1.2"
+supersedes: "STANDARD_RADA_SA_AI_AGENTIMA v1.3"
 authority: "Human Owner"
 scope: "Svi projekti, svi modeli i harnessi"
 audience: "Svaki developer ili tim koji radi sa AI coding agentima — usvajanje u §19"
 canonical_location: "STANDARD.md u repou agent-standard (lokalno obično ~/agent-standard/STANDARD.md)"
 ---
 
-# Standard rada sa AI agentima — v1.3
+# Standard rada sa AI agentima — v1.4
 
 > **Model radi. Mehanizam provodi. Evidence potvrđuje. Nezavisni reviewer
 > pokušava oboriti rezultat. Čovjek odlučuje.**
@@ -557,7 +557,11 @@ Ako alat prikazuje popunjenost konteksta, početna politika je:
 ```
 
 Procenti nisu univerzalni. Alat-specifična rezerva tokena ili pouzdaniji
-prag imaju prednost. **Ako alat ne prikazuje pouzdanu popunjenost, agent ne
+prag imaju prednost. Prag se zato zapisuje i u **tokenima**, ne samo u
+procentima: kod velikog prozora (orijentaciono 500k tokena i više) kvalitet
+rada opada mnogo prije nego što se prozor napuni, pa se koriste niži procenti
+(npr. NORMAL do ~10%, SOFT ~10–20%, WARNING ~20–30%, HARD ~30%), odnosno
+apsolutni pragovi u tokenima koje projekat ili alat zapiše. **Ako alat ne prikazuje pouzdanu popunjenost, agent ne
 izmišlja procenat** — radi po prirodnim okidačima (§7.5) i ugrađenim
 upozorenjima alata.
 
@@ -565,7 +569,7 @@ upozorenjima alata.
 |---|---|---|---|
 | NORMAL | istraživanje, čitanje, implementacija, novi atomski korak | — | — |
 | SOFT | nastaviti tekući atomski korak; sam pokrenuti kompakciju ako je trenutak dobar | praviti checkpoint usred trivijalnog koraka samo zbog procenta | procijeniti blizinu prirodne granice; na njoj checkpoint |
-| WARNING | završiti tekući bezbjedni atomski korak | otvoriti novi veliki research/refactor/feature slice; "još imam mjesta" kao razlog | checkpoint; kompakcija odmah ili na prvoj prirodnoj granici |
+| WARNING | završiti tekući bezbjedni atomski korak | otvoriti novi veliki research/refactor/feature slice; "još imam mjesta" kao razlog; pokrenuti komandu ili čitanje sa ogromnim izlazom (jedan veliki izlaz alata može preskočiti HARD prag prije nego što ograničenje proradi) | checkpoint; kompakcija odmah ili na prvoj prirodnoj granici |
 | HARD | samo minimalno da write/transakcija/refactor ne ostanu nekonzistentni | novi research, otvaranje velikog fajla radi šire istrage, novi refactor ili slice, "još samo jedan pokušaj" | checkpoint + SELF HANDOFF → kompakcija ili HANDOFF; poslije nastavka reorijentacija (§7.8) |
 
 SOFT i WARNING su zona **agentove procjene**: agent bira prirodnu granicu.
@@ -624,6 +628,12 @@ Pazi na:      ne mijenjati registry importera ni dijeljeni API parsera (van scop
 SELF HANDOFF nije novi izvor istine i ne sadrži nedokazane tvrdnje kao
 činjenice.
 
+**SELF HANDOFF prelazi kompakciju doslovno.** Sažimanje gubi informaciju, a
+handoff postoji upravo da je sačuva. Zato se ne prepušta sažimanju nego se
+prenosi tekst-u-tekst: kao bilješka koju alat vraća neizmijenjenu, kao
+doslovan blok koji instrukcija za kompakciju zahtijeva da se kopira bez
+izmjene, ili kao fajl (progress/handoff) koji se poslije kompakcije pročita.
+
 Gdje checkpoint živi:
 
 ```text
@@ -676,7 +686,7 @@ Sažmi sesiju kao engineering handoff.
 Sačuvaj: Goal, Granice ovlaštenja, Urađeno, Trenutno stanje, Ključne odluke,
 Oborene pretpostavke, Relevantne fajlove, Promijenjene fajlove, Evidence,
 Otvorene blokere/findinge, Sljedeću atomsku akciju, Ne ponavljati,
-SELF HANDOFF (Prvo uradi / Ne ponavljaj / Pazi na).
+SELF HANDOFF (Prvo uradi / Ne ponavljaj / Pazi na) — prepiši ga DOSLOVNO, bez sažimanja.
 Ne pretvaraj tvrdnju u činjenicu. Neprovjereno označi UNVERIFIED.
 Ne proglašavaj DONE zato što se sesija kompaktuje. Ne skrivaj blocker ni finding.
 ```
@@ -684,6 +694,11 @@ Ne proglašavaj DONE zato što se sesija kompaktuje. Ne skrivaj blocker ni findi
 Ako alat ima kvalitetnu ugrađenu kompakciju koja se ne može prilagoditi, ne
 uvodi se workaround radi uniformnosti — checkpoint + SELF HANDOFF ostaju
 trajni ulaz za nastavak.
+
+**Neuspjela ili prekinuta kompakcija** ne smije izgubiti stanje: checkpoint i
+SELF HANDOFF ostaju sačuvani, ograničenje iz HARD zone ostaje aktivno, a
+kompakcija se ponavlja (automatski ili ručno). Agent ne nastavlja novi rad
+dok kompakcija ne uspije ili dok ne preda rad kao HANDOFF.
 
 ### 7.8 Reorijentacija poslije kompakcije ili nove sesije
 
@@ -732,6 +747,12 @@ evidence > summary
 Primjer (Claude Code): instrukcija iz §7.7 upisuje se u projektni
 `CLAUDE.md` pod naslovom o kompakciji, pa je koristi i automatska i ručna
 (`/compact`) kompakcija.
+
+Primjer mehaničke provedbe (pi): ekstenzija koja agentu daje alat za čitanje
+stvarne popunjenosti, alat za kompakciju sa doslovnom bilješkom i blokadu svih
+drugih alata u HARD zoni pomjera §7.4 iz DISCIPLINE u PROVEDENO (§6.1). Tuđa
+ekstenzija ili hook se prije upotrebe pregleda kao i svaki kod koji radi sa
+pristupom tajnama i mreži (H1, H7), i prvo se proba van produkcionog projekta.
 
 ---
 
@@ -1658,6 +1679,28 @@ dopuna zamijenila stare §7.3–7.5 umjesto da ide pored njih, a §19 je
 namijenjen samo onome ko standard prvi put usvaja (§0 ga ne traži za
 svakodnevni rad).
 
+
+### C.7 Promjene v1.3 → v1.4
+
+Izvor: pregled implementacije self-kompakcije za pi agenta
+(github.com/disler/self-compact-pi-agent, ekstenzija sa zonama
+Notice/Warning/Forced, alatima `self_compact(note_to_self)` i `view_context`).
+Preuzeta su četiri mehanizma koja v1.3 nije pokrivao. Napomena o dokazu: taj
+repo pokazuje da je mehanizam izvodljiv (deterministički testovi), ali ne
+objavljuje mjerenja da poboljšava rezultat, pa su pravila usvojena kao zaštita
+od poznatih načina gubitka stanja, ne kao dokazano poboljšanje kvaliteta.
+Usvojeno od Human Ownera 2026-10-12.
+
+| Mjesto | v1.3 | v1.4 | Razlog |
+|---|---|---|---|
+| §7.4 | pragovi samo u procentima | pragovi i u tokenima; veliki prozor (≥500k) → niži procenti | kvalitet opada prije nego što se veliki prozor napuni |
+| §7.4 | — | WARNING: bez komandi sa ogromnim izlazom | jedan veliki izlaz alata preskače prag prije nego što ograničenje proradi |
+| §7.6 | SELF HANDOFF u checkpointu | SELF HANDOFF prelazi kompakciju doslovno, ne kroz sažimanje | sažimanje gubi upravo ono što handoff treba da sačuva |
+| §7.7 | — | neuspjela kompakcija: handoff i ograničenje ostaju, ponovni pokušaj | stanje se ne smije izgubiti zbog neuspjelog sažimanja |
+| §7.10 | primjer za Claude Code | + primjer mehaničke provedbe (ekstenzija za pi) i uslov pregleda tuđeg koda | — |
+
+Uklonjeno ili pojednostavljeno: ništa; sve je dopuna postojećih §7.4–7.10.
+
 ---
 
 ## Izvori
@@ -1672,6 +1715,7 @@ Provođenje i AGENTS.md:
 - Gitleaks u pre-commit i CI — https://stevekinney.com/courses/self-testing-ai-agents/secret-scanning-with-gitleaks
 
 Context, kontinuitet, multi-agent:
+- Self-kompakcija za pi agenta (zone, doslovna bilješka, blokada alata) — https://github.com/disler/self-compact-pi-agent
 - Anthropic: Effective harnesses for long-running agents — https://anthropic.com/engineering/effective-harnesses-for-long-running-agents
 - Anthropic: Effective context engineering (sažetak) — https://agentic-ai.readthedocs.io/en/latest/ContextEngineering/anthropic/
 - Anthropic: How we built our multi-agent research system — https://www.anthropic.com/engineering/multi-agent-research-system
