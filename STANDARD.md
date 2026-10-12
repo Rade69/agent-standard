@@ -1326,6 +1326,9 @@ izvršni dokaz, ne tvrdnja).
 
 ### 19.2 Minimalni put — prvi dan
 
+Korake 2–5 može uraditi i sam agent: prompt je u `BOOTSTRAP_PROMPT.md`
+(agent pita za potvrdu prije svake izmjene).
+
 ```text
 1. Pročitaj §0, §1, §3 i §4 (oko 15 minuta). To je jezgro.
 2. Drži JEDNU kanonsku kopiju standarda (npr. klon ovog repoa na stalnoj

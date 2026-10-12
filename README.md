@@ -24,6 +24,12 @@ Aktuelna verzija: **v1.3** (`STANDARD.md`). Istorija promjena je u Prilogu C.
 
 ## Kako početi
 
+**Najbrže:** kopiraj prompt iz [`BOOTSTRAP_PROMPT.md`](BOOTSTRAP_PROMPT.md) u svog
+coding agenta. On pregleda okruženje, pokaže plan i uz tvoju potvrdu za svaki
+korak uradi sve ispod.
+
+Ručno:
+
 1. Pročitaj `STANDARD.md` §19 (usvajanje), zatim §0, §1, §3 i §4.
 2. Kloniraj repo na stalnu lokaciju, npr. `~/agent-standard`.
 3. Globalni router za svoje agente:
@@ -43,6 +49,7 @@ Aktuelna verzija: **v1.3** (`STANDARD.md`). Istorija promjena je u Prilogu C.
 |---|---|
 | `STANDARD.md` | kanonski standard |
 | `GLOBAL_ROUTER.md` | kratak sažetak koji `install.py` upisuje u globalnu konfiguraciju agenata |
+| `BOOTSTRAP_PROMPT.md` | prompt za agenta koji uz tvoju potvrdu postavi standard globalno i u projektima |
 | `install.py` | instalacija, provjera i uklanjanje router bloka (samo standardna biblioteka) |
 | `templates/` | Task Contract (kratki i puni), implementation i review report, checkpoint, projektni override |
 | `archive/` | ranije verzije i kandidati, samo kao istorija |
